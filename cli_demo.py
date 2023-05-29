@@ -47,7 +47,7 @@ def main():
                 print(resp["result"])
         if REPLY_WITH_SOURCE:
             source_text = [f"""出处 [{inum + 1}] {os.path.split(doc.metadata['source'])[-1]}：\n\n{doc.page_content}\n\n"""
-                           # f"""相关度：{doc.metadata['score']}\n\n"""
+                           f"""相关度：{doc.metadata['score']}\n\n"""
                            for inum, doc in
                            enumerate(resp["source_documents"])]
             print("\n\n" + "\n\n".join(source_text))
