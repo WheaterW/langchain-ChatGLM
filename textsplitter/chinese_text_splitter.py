@@ -3,7 +3,7 @@ import re
 from typing import List
 from configs.model_config import SENTENCE_SIZE
 
-
+# 使用 re 模块进行基于正则匹配的句子划分
 class ChineseTextSplitter(CharacterTextSplitter):
     def __init__(self, pdf: bool = False, sentence_size: int = SENTENCE_SIZE, **kwargs):
         super().__init__(**kwargs)
@@ -12,10 +12,10 @@ class ChineseTextSplitter(CharacterTextSplitter):
 
     def split_text1(self, text: str) -> List[str]:
         if self.pdf:
-            text = re.sub(r"\n{3,}", "\n", text)
+            text = re.sub(r"\n{3,}", "\n", text)    # re.sub: 替换匹配的字符串
             text = re.sub('\s', ' ', text)
             text = text.replace("\n\n", "")
-        sent_sep_pattern = re.compile('([﹒﹔﹖﹗．。！？]["’”」』]{0,2}|(?=["‘“「『]{1,2}|$))')  # del ：；
+        sent_sep_pattern = re.compile('([﹒﹔﹖﹗．。！？]["’”」』]{0,2}|(?=["‘“「『]{1,2}|$))')  # del ：；    # re.conpile：编译一个正则模式
         sent_list = []
         for ele in sent_sep_pattern.split(text):
             if sent_sep_pattern.match(ele) and sent_list:
@@ -38,7 +38,8 @@ class ChineseTextSplitter(CharacterTextSplitter):
         text = text.rstrip()  # 段尾如果有多余的\n就去掉它
         # 很多规则中会考虑分号;，但是这里我把它忽略不计，破折号、英文双引号等同样忽略，需要的再做些简单调整即可。
         ls = [i for i in text.split("\n") if i]
-        for ele in ls:
+        for ele in ls:  # 多级划分
+            # print(ele, len(ele))
             if len(ele) > self.sentence_size:
                 ele1 = re.sub(r'([,，.]["’”」』]{0,2})([^,，.])', r'\1\n\2', ele)
                 ele1_ls = ele1.split("\n")
