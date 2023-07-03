@@ -17,6 +17,7 @@ import models.shared as shared
 from agent import bing_search
 from langchain.docstore.document import Document
 from functools import lru_cache
+from textsplitter.zh_title_enhance import zh_title_enhance
 
 
 # patch HuggingFaceEmbeddings to make it hashable
@@ -55,8 +56,8 @@ def tree(filepath, ignore_dir_names=None, ignore_file_names=None):
                     ret_list.extend(tree(fullfilepath, ignore_dir_names, ignore_file_names)[0])
     return ret_list, [os.path.basename(p) for p in ret_list]
 
-# 加载多种格式的语料库文件，设计目标似乎是多模态。包括文件文本化处理和文本划分 (split) (WYZ, 23/06/16)
-def load_file(filepath, sentence_size=SENTENCE_SIZE):
+
+def load_file(filepath, sentence_size=SENTENCE_SIZE, using_zh_title_enhance=ZH_TITLE_ENHANCE):
     if filepath.lower().endswith(".md"):
         loader = UnstructuredFileLoader(filepath, mode="elements")
         docs = loader.load()
@@ -83,6 +84,8 @@ def load_file(filepath, sentence_size=SENTENCE_SIZE):
         loader = UnstructuredFileLoader(filepath, mode="elements")
         textsplitter = ChineseTextSplitter(pdf=False, sentence_size=sentence_size)
         docs = loader.load_and_split(text_splitter=textsplitter)
+    if using_zh_title_enhance:
+        docs = zh_title_enhance(docs)
     write_check_file(filepath, docs)
     return docs
 
@@ -205,6 +208,7 @@ class LocalDocQA:
             return vs_path, loaded_files
         else:
             logger.info("文件均未成功加载，请检查依赖包或替换为其他文件再次上传。")
+
             return None, loaded_files
 
     def one_knowledge_add(self, vs_path, one_title, one_conent, one_content_segmentation, sentence_size):
