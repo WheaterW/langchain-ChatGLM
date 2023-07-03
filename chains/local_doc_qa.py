@@ -3,7 +3,7 @@ from vectorstores import MyFAISS
 from langchain.document_loaders import UnstructuredFileLoader, TextLoader, CSVLoader
 from configs.model_config import *
 import datetime
-from textsplitter import ChineseTextSplitter
+from textsplitter import ChineseTextSplitter, AliTextSplitter
 from typing import List
 from utils import torch_gc
 from tqdm import tqdm
@@ -55,16 +55,20 @@ def tree(filepath, ignore_dir_names=None, ignore_file_names=None):
                     ret_list.extend(tree(fullfilepath, ignore_dir_names, ignore_file_names)[0])
     return ret_list, [os.path.basename(p) for p in ret_list]
 
-
+# 加载多种格式的语料库文件，设计目标似乎是多模态。包括文件文本化处理和文本划分 (split) (WYZ, 23/06/16)
 def load_file(filepath, sentence_size=SENTENCE_SIZE):
     if filepath.lower().endswith(".md"):
         loader = UnstructuredFileLoader(filepath, mode="elements")
         docs = loader.load()
     elif filepath.lower().endswith(".txt"):
         loader = TextLoader(filepath, autodetect_encoding=True)
-        textsplitter = ChineseTextSplitter(pdf=False, sentence_size=sentence_size)
-        docs = loader.load_and_split(textsplitter)
-    elif filepath.lower().endswith(".pdf"):
+        if USE_ALI_DAMO:
+            textsplitter = AliTextSplitter(pdf=False)
+        else:
+            textsplitter = ChineseTextSplitter(pdf=False, sentence_size=sentence_size)
+        docs = loader.load_and_split(textsplitter)    # 实质：先 load 再 split，load 实质如下。
+        # docs = loader.load()    # 尝试对比不分词效果（实质：text = f.read()）
+    elif filepath.lower().endswith(".pdf"):     
         loader = UnstructuredPaddlePDFLoader(filepath)
         textsplitter = ChineseTextSplitter(pdf=True, sentence_size=sentence_size)
         docs = loader.load_and_split(textsplitter)
@@ -89,6 +93,7 @@ def write_check_file(filepath, docs):
         os.makedirs(folder_path)
     fp = os.path.join(folder_path, 'load_file.txt')
     with open(fp, 'a+', encoding='utf-8') as fout:
+    # with open(fp, 'w', encoding='utf-8') as fout:
         fout.write("filepath=%s,len=%s" % (filepath, len(docs)))
         fout.write('\n')
         for i in docs:
@@ -145,6 +150,7 @@ class LocalDocQA:
                 print("路径不存在")
                 return None
             elif os.path.isfile(filepath):
+                print("filepath:", filepath)
                 file = os.path.split(filepath)[-1]
                 try:
                     docs = load_file(filepath, sentence_size)
@@ -157,6 +163,7 @@ class LocalDocQA:
             elif os.path.isdir(filepath):
                 docs = []
                 for fullfilepath, file in tqdm(zip(*tree(filepath, ignore_dir_names=['tmp_files'])), desc="加载文件"):
+                    print("fullfilepath:", fullfilepath)
                     try:
                         docs += load_file(fullfilepath, sentence_size)
                         loaded_files.append(fullfilepath)
@@ -179,6 +186,7 @@ class LocalDocQA:
                 except Exception as e:
                     logger.error(e)
                     logger.info(f"{file} 未能成功加载")
+        # print(docs) # debug
         if len(docs) > 0:
             logger.info("文件加载完毕，正在生成向量库")
             if vs_path and os.path.isdir(vs_path) and "index.faiss" in os.listdir(vs_path):
@@ -231,7 +239,8 @@ class LocalDocQA:
             prompt = generate_prompt(related_docs_with_score, query)
         else:
             prompt = query
-
+        print(prompt)
+        print(chat_history)
         for answer_result in self.llm.generatorAnswer(prompt=prompt, history=chat_history,
                                                       streaming=streaming):
             resp = answer_result.llm_output["answer"]
