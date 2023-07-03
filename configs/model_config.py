@@ -58,6 +58,12 @@ llm_model_dict = {
         "local_model_path": None,
         "provides": "ChatGLM"
     },
+    "chatglm2-6b": {
+        "name": "chatglm2-6b",
+        "pretrained_model_name": "THUDM/chatglm2-6b",
+        "local_model_path": None,
+        "provides": "ChatGLM"
+    },
 
     "chatyuan": {
         "name": "chatyuan",
@@ -98,7 +104,7 @@ llm_model_dict = {
 }
 
 # LLM 名称
-LLM_MODEL = "chatglm-6b"
+LLM_MODEL = "chatglm2-6b"
 # 量化加载8bit 模型
 LOAD_IN_8BIT = False
 # Load the model with bfloat16 precision. Requires NVIDIA Ampere GPU.
@@ -119,6 +125,9 @@ USE_PTUNING_V2 = False
 # LLM running device
 LLM_DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
+# 是否使用 Ali-Damo 文本分割器
+USE_ALI_DAMO = False
+
 # 知识库默认存储路径
 KB_ROOT_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "knowledge_base")
 
@@ -128,14 +137,20 @@ PROMPT_TEMPLATE = """已知信息：
 
 根据上述已知信息，使用简洁和专业的语言来回答用户的问题。如果无法上述信息中得到答案，请回复 “根据已知信息无法回答该问题” 或 “没有提供足够的相关信息”，不允许在答案中添加上述信息之外的编造内容，答案请使用中文。 问题是：{question}"""
 
+PROMPT_TEMPLATE_0 = """已知信息：
+{context} 
+
+根据上述已知信息，使用简洁和专业的语言来回答用户的问题。如果无法上述信息中得到答案，请回复 “根据已知信息无法回答该问题” 或 “没有提供足够的相关信息”，不允许在答案中添加上述信息之外的编造内容，答案请使用中文。 问题是：{question}"""
+
+
 # 缓存知识库数量
 CACHED_VS_NUM = 1
 
 # 文本分句长度
-SENTENCE_SIZE = 100
+SENTENCE_SIZE = 100     # init: 100
 
 # 匹配后单段上下文长度
-CHUNK_SIZE = 250
+CHUNK_SIZE = 500        # init: 500
 
 # 传入LLM的历史记录长度
 LLM_HISTORY_LEN = 3
@@ -144,7 +159,7 @@ LLM_HISTORY_LEN = 3
 VECTOR_SEARCH_TOP_K = 5
 
 # 知识检索内容相关度 Score, 数值范围约为0-1100，如果为0，则不生效，经测试设置为小于500时，匹配结果更精准
-VECTOR_SEARCH_SCORE_THRESHOLD = 0
+VECTOR_SEARCH_SCORE_THRESHOLD = 0   # init: 0
 
 NLTK_DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "nltk_data")
 
